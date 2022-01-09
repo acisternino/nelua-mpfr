@@ -1,0 +1,600 @@
+##[[
+-- !! Needed to avoid name clashes !!
+pragmas.unitname = 'mpfr_bnd'
+
+cinclude '<stdarg.h>'
+cinclude '<stdint.h>'
+-- Define this to remove stdio-dependent functions
+if not NELUA_MPFR_NO_STDIO then
+  cinclude '<stdio.h>'
+end
+cdefine 'MPFR_USE_NO_MACRO'
+cinclude '<mpfr.h>'
+
+linklib 'mpfr'
+linklib 'gmp'
+]]
+
+-- ******************************************************************
+-- GMP
+-- ******************************************************************
+--
+-- Defines
+--
+global gmp_randalg_t: type <cimport,nodecl,using> = @enum(cint){
+  GMP_RAND_ALG_DEFAULT = 0,
+  GMP_RAND_ALG_LC = 0
+}
+
+--
+-- Types
+--
+global __mpz_struct: type <cimport,nodecl> = @record{
+  _mp_alloc: cint,
+  _mp_size: cint,
+  _mp_d: *culong
+}
+global __mpq_struct: type <cimport,nodecl> = @record{
+  _mp_num: __mpz_struct,
+  _mp_den: __mpz_struct
+}
+global __mpf_struct: type <cimport,nodecl> = @record{
+  _mp_prec: cint,
+  _mp_size: cint,
+  _mp_exp: clong,
+  _mp_d: *culong
+}
+global __gmp_randstate_struct: type <cimport,nodecl> = @record{
+  _mp_seed: [1]__mpz_struct,
+  _mp_alg: gmp_randalg_t,
+  _mp_algdata: union{
+    _mp_lc: pointer
+  }
+}
+
+global mpz_t: type = @__mpz_struct
+global mpq_t: type = @__mpq_struct
+global mpf_t: type = @__mpf_struct
+
+global mpz_ptr: type = @*__mpz_struct
+global mpq_ptr: type = @*__mpq_struct
+global mpf_ptr: type = @*__mpf_struct
+
+global gmp_randstate_t: type = @__gmp_randstate_struct
+
+--
+-- Functions
+--
+global function gmp_randinit_default(state: *gmp_randstate_t): void <cimport '__gmp_randinit_default',nodecl> end
+global function gmp_randinit_mt(state: *gmp_randstate_t): void <cimport '__gmp_randinit_mt',nodecl> end
+
+-- ******************************************************************
+-- MPFR
+-- ******************************************************************
+--
+-- Defines
+--
+global mpfr_rnd_t: type <cimport,nodecl,using> = @enum(cint){
+  MPFR_RNDN = 0,
+  MPFR_RNDZ = 1,
+  MPFR_RNDU = 2,
+  MPFR_RNDD = 3,
+  MPFR_RNDA = 4,
+  MPFR_RNDF = 5,
+  MPFR_RNDNA = -1
+}
+
+global mpfr_kind_t: type <cimport,nodecl,using> = @enum(cint){
+  MPFR_NAN_KIND = 0,
+  MPFR_INF_KIND = 1,
+  MPFR_ZERO_KIND = 2,
+  MPFR_REGULAR_KIND = 3
+}
+
+global mpfr_free_cache_t: type <cimport,nodecl,using> = @enum(cint){
+  MPFR_FREE_LOCAL_CACHE = 1,
+  MPFR_FREE_GLOBAL_CACHE = 2
+}
+
+-- We get these from the header file to mirror the real version being used
+global MPFR_VERSION_MAJOR: cint <cimport,nodecl,const>
+global MPFR_VERSION_MINOR: cint <cimport,nodecl,const>
+global MPFR_VERSION_PATCHLEVEL: cint <cimport,nodecl,const>
+global MPFR_VERSION_STRING: cstring <cimport,nodecl,const>
+
+global function MPFR_VERSION_NUM(a: clong, b: clong, c: clong): clong <cimport, nodecl> end
+global MPFR_VERSION <const> = MPFR_VERSION_NUM(MPFR_VERSION_MAJOR, MPFR_VERSION_MINOR, MPFR_VERSION_PATCHLEVEL)
+
+global MPFR_FLAGS_UNDERFLOW: cint <comptime> = 1
+global MPFR_FLAGS_OVERFLOW: cint <comptime> = 2
+global MPFR_FLAGS_NAN: cint <comptime> = 4
+global MPFR_FLAGS_INEXACT: cint <comptime> = 8
+global MPFR_FLAGS_ERANGE: cint <comptime> = 16
+global MPFR_FLAGS_DIVBY0: cint <comptime> = 32
+global MPFR_FLAGS_ALL: cint <comptime> = (MPFR_FLAGS_UNDERFLOW | MPFR_FLAGS_OVERFLOW | MPFR_FLAGS_NAN | MPFR_FLAGS_INEXACT | MPFR_FLAGS_ERANGE | MPFR_FLAGS_DIVBY0)
+
+global MPFR_PREC_MIN: clong <comptime> = 1
+global MPFR_PREC_MAX: clong <cimport,nodecl,const>
+
+global MPFR_EMIN_DEFAULT: clong <cimport,nodecl,const>
+global MPFR_EMAX_DEFAULT: clong <cimport,nodecl,const>
+global MPFR_EMIN_MIN: clong <cimport,nodecl,const>
+global MPFR_EMIN_MAX: clong <cimport,nodecl,const>
+global MPFR_EMAX_MIN: clong <cimport,nodecl,const>
+global MPFR_EMAX_MAX: clong <cimport,nodecl,const>
+
+--
+-- Types
+--
+global __mpfr_struct: type <cimport,nodecl> = @record{
+  _mpfr_prec: clong,
+  _mpfr_sign: cint,
+  _mpfr_exp: clong,
+  _mpfr_d: *culong
+}
+
+global mpfr_ptr: type = @*__mpfr_struct
+global mpfr_srcptr: type = @*__mpfr_struct
+
+global mpfr_t: type = @__mpfr_struct
+
+--
+-- Initialization Functions
+--
+global function mpfr_init2(x: mpfr_ptr, prec: clong): void <cimport,nodecl> end
+global function mpfr_inits2(prec: clong, x: mpfr_ptr, ...: cvarargs): void <cimport,nodecl> end
+global function mpfr_init(x: mpfr_ptr): void <cimport,nodecl> end
+global function mpfr_inits(x: mpfr_ptr, ...: cvarargs): void <cimport,nodecl> end
+global function mpfr_clear(x: mpfr_ptr): void <cimport,nodecl> end
+global function mpfr_clears(x: mpfr_ptr, ...: cvarargs): void <cimport,nodecl> end
+global function mpfr_set_default_prec(prec: clong): void <cimport,nodecl> end
+global function mpfr_get_default_prec(): clong <cimport,nodecl> end
+global function mpfr_get_prec(x: mpfr_srcptr): clong <cimport,nodecl> end
+global function mpfr_set_prec(x: mpfr_ptr, prec: clong): void <cimport,nodecl> end
+
+--
+-- Assignment Functions
+--
+global function mpfr_set(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_ui(rop: mpfr_ptr, op: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_si(rop: mpfr_ptr, op: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_flt(rop: mpfr_ptr, op: cfloat, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_d(rop: mpfr_ptr, op: cdouble, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_ld(rop: mpfr_ptr, op: clongdouble, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_z(rop: mpfr_ptr, op: mpz_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_q(rop: mpfr_ptr, op: mpq_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_f(rop: mpfr_ptr, op: mpf_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_set_ui_2exp(rop: mpfr_ptr, op: culong, e: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_si_2exp(rop: mpfr_ptr, op: clong, e: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_set_z_2exp(rop: mpfr_ptr, op: mpz_ptr, e: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_set_str(rop: mpfr_ptr, s: cstring, base: cint, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_strtofr(rop: mpfr_ptr, nptr: cstring, endptr: *cstring, base: cint, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_set_nan(x: mpfr_ptr): void <cimport,nodecl> end
+global function mpfr_set_inf(x: mpfr_ptr, sign: cint): void <cimport,nodecl> end
+global function mpfr_set_zero(x: mpfr_ptr, sign: cint): void <cimport,nodecl> end
+
+global function mpfr_swap(x: mpfr_ptr, y: mpfr_ptr): void <cimport,nodecl> end
+
+--
+-- Combined Initialization and Assignment Functions
+--
+## function gen_mpfr_init_func(prefix, argtype)
+  global function #|'mpfr_init_set' .. prefix|#(x: mpfr_ptr, op: #|argtype|#, rnd: mpfr_rnd_t): cint <inline>
+    mpfr_init(x)
+    return #|'mpfr_set' .. prefix|#(x, op, rnd)
+  end
+## end
+
+## gen_mpfr_init_func('', 'mpfr_ptr')
+## gen_mpfr_init_func('_si', 'clong')
+## gen_mpfr_init_func('_ui', 'culong')
+## gen_mpfr_init_func('_d', 'float64')
+## gen_mpfr_init_func('_ld', 'clongdouble')
+## gen_mpfr_init_func('_z', 'mpz_ptr')
+## gen_mpfr_init_func('_q', 'mpq_ptr')
+## gen_mpfr_init_func('_f', 'mpf_ptr')
+
+global function mpfr_init_set_str(x: mpfr_ptr, s: cstring, base: cint, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+--
+-- Conversion Functions
+--
+global function mpfr_get_flt(op: mpfr_srcptr, rnd: mpfr_rnd_t): float32 <cimport,nodecl> end
+global function mpfr_get_d(op: mpfr_srcptr, rnd: mpfr_rnd_t): cdouble <cimport,nodecl> end
+global function mpfr_get_ld(op: mpfr_srcptr, rnd: mpfr_rnd_t): clongdouble <cimport,nodecl> end
+global function mpfr_get_si(op: mpfr_srcptr, rnd: mpfr_rnd_t): clong <cimport,nodecl> end
+global function mpfr_get_ui(op: mpfr_srcptr, rnd: mpfr_rnd_t): culong <cimport,nodecl> end
+global function mpfr_get_d_2exp(exp: *clong, op: mpfr_srcptr, rnd: mpfr_rnd_t): cdouble <cimport,nodecl> end
+global function mpfr_get_ld_2exp(exp: *clong, op: mpfr_srcptr, rnd: mpfr_rnd_t): clongdouble <cimport,nodecl> end
+global function mpfr_frexp(exp: *clong, y: mpfr_ptr, x: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_get_z_2exp(rop: mpz_ptr, op: mpfr_srcptr): clong <cimport,nodecl> end
+global function mpfr_get_z(rop: mpz_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_get_q(rop: mpq_ptr, op: mpfr_srcptr): void <cimport,nodecl> end
+global function mpfr_get_f(rop: mpf_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_get_str_ndigits(b: cint, p: clong): csize <cimport,nodecl> end
+global function mpfr_get_str(str: cstring, expptr: *clong, base: cint, n: csize, op: mpfr_srcptr, rnd: mpfr_rnd_t): cstring <cimport,nodecl> end
+global function mpfr_free_str(str: cstring): void <cimport,nodecl> end
+
+global function mpfr_fits_ushort_p(op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fits_sshort_p(op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fits_uint_p(op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fits_sint_p(op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fits_ulong_p(op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fits_slong_p(op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fits_uintmax_p(op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fits_intmax_p(op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+--
+-- Arithmetic Functions
+--
+global function mpfr_add(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_add_ui(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_add_si(rop: mpfr_ptr, op1: mpfr_srcptr, op2: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_add_d(rop: mpfr_ptr, op1: mpfr_srcptr, op2: cdouble, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_add_z(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpz_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_add_q(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpq_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_sub(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_ui_sub(rop: mpfr_ptr, op1: culong, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sub_ui(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_si_sub(rop: mpfr_ptr, op1: clong, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sub_si(rop: mpfr_ptr, op1: mpfr_srcptr, op2: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_d_sub(rop: mpfr_ptr, op1: cdouble, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sub_d(rop: mpfr_ptr, op1: mpfr_srcptr, op2: cdouble, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_z_sub(rop: mpfr_ptr, op1: mpz_ptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sub_z(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpz_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sub_q(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpq_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_mul(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_mul_ui(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_mul_si(rop: mpfr_ptr, op1: mpfr_srcptr, op2: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_mul_d(rop: mpfr_ptr, op1: mpfr_srcptr, op2: cdouble, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_mul_z(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpz_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_mul_q(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpq_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_sqr(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_div(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_ui_div(rop: mpfr_ptr, op1: culong, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_div_ui(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_si_div(rop: mpfr_ptr, op1: clong, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_div_si(rop: mpfr_ptr, op1: mpfr_srcptr, op2: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_d_div(rop: mpfr_ptr, op1: cdouble, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_div_d(rop: mpfr_ptr, op1: mpfr_srcptr, op2: cdouble, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_div_z(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpz_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_div_q(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpq_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_sqrt(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sqrt_ui(rop: mpfr_ptr, op: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_rec_sqrt(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_cbrt(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_root(rop: mpfr_ptr, op: mpfr_srcptr, n: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_rootn_ui(rop: mpfr_ptr, op: mpfr_srcptr, n: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_neg(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_abs(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_dim(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_mul_2ui(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_mul_2si(rop: mpfr_ptr, op1: mpfr_srcptr, op2: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_div_2ui(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_div_2si(rop: mpfr_ptr, op1: mpfr_srcptr, op2: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_fac_ui(rop: mpfr_ptr, op: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_fma(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, op3: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fms(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, op3: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fmma(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, op3: mpfr_srcptr, op4: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fmms(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, op3: mpfr_srcptr, op4: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_hypot(rop: mpfr_ptr, x: mpfr_srcptr, y: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sum(rop: mpfr_ptr, tab: *mpfr_ptr, n: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_dot(rop: mpfr_ptr, a: *mpfr_ptr, b: *mpfr_ptr, n: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+--
+-- Comparison Functions
+--
+global function mpfr_cmp(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_cmp_ui(op1: mpfr_srcptr, op2: culong): cint <cimport,nodecl> end
+global function mpfr_cmp_si(op1: mpfr_srcptr, op2: clong): cint <cimport,nodecl> end
+global function mpfr_cmp_d(op1: mpfr_srcptr, op2: cdouble): cint <cimport,nodecl> end
+global function mpfr_cmp_ld(op1: mpfr_srcptr, op2: clongdouble): cint <cimport,nodecl> end
+global function mpfr_cmp_z(op1: mpfr_srcptr, op2: mpz_ptr): cint <cimport,nodecl> end
+global function mpfr_cmp_q(op1: mpfr_srcptr, op2: mpq_ptr): cint <cimport,nodecl> end
+global function mpfr_cmp_f(op1: mpfr_srcptr, op2: mpf_ptr): cint <cimport,nodecl> end
+
+global function mpfr_cmp_ui_2exp(op1: mpfr_srcptr, op2: culong, e: clong): cint <cimport,nodecl> end
+global function mpfr_cmp_si_2exp(op1: mpfr_srcptr, op2: clong, e: clong): cint <cimport,nodecl> end
+
+global function mpfr_cmpabs(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_cmpabs_ui(op1: mpfr_srcptr, op2: culong): cint <cimport,nodecl> end
+
+global function mpfr_nan_p(op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_inf_p(op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_number_p(op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_zero_p(op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_regular_p(op: mpfr_srcptr): cint <cimport,nodecl> end
+
+global function mpfr_sgn(op: mpfr_srcptr): cint <cimport,nodecl> end
+
+global function mpfr_greater_p(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_greaterequal_p(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_less_p(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_lessequal_p(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_equal_p(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+
+global function mpfr_lessgreater_p(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+
+global function mpfr_unordered_p(op1: mpfr_srcptr, op2: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_total_order_p(x: mpfr_srcptr, y: mpfr_srcptr): cint <cimport,nodecl> end
+
+--
+-- Transcendental Functions
+--
+global function mpfr_log(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_log_ui(rop: mpfr_ptr, op: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_log2(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_log10(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_log1p(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_exp(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_exp2(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_exp10(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_expm1(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_pow(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_pow_ui(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_pow_si(rop: mpfr_ptr, op1: mpfr_srcptr, op2: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_pow_z(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpz_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_ui_pow_ui(rop: mpfr_ptr, op1: culong, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_ui_pow(rop: mpfr_ptr, op1: culong, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_cos(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sin(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_tan(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sin_cos(sop: mpfr_ptr, cop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_sec(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_csc(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_cot(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_acos(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_asin(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_atan(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_atan2(rop: mpfr_ptr, y: mpfr_srcptr, x: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_cosh(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sinh(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_tanh(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_sinh_cosh(sop: mpfr_ptr, cop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_sech(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_csch(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_coth(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_acosh(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_asinh(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_atanh(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_eint(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_li2(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_gamma(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_gamma_inc(rop: mpfr_ptr, op: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_lngamma(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_lgamma(rop: mpfr_ptr, signp: *cint, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_digamma(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_beta(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_zeta(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_zeta_ui(rop: mpfr_ptr, op: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_erf(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_erfc(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_j0(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_j1(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_jn(rop: mpfr_ptr, n: clong, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_y0(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_y1(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_yn(rop: mpfr_ptr, n: clong, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_agm(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_ai(rop: mpfr_ptr, x: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_const_pi(rop: mpfr_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_const_log2(rop: mpfr_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_const_euler(rop: mpfr_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_const_catalan(rop: mpfr_ptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+--
+-- Input and Output Functions
+--
+## if not NELUA_MPFR_NO_STDIO then
+
+global FILE: type <cimport,nodecl,forwarddecl> = @record{}
+
+global function mpfr_out_str(stream: *FILE, base: cint, n: csize, op: mpfr_srcptr, rnd: mpfr_rnd_t): csize <cimport '__gmpfr_out_str',nodecl> end
+global function mpfr_inp_str(rop: mpfr_ptr, stream: *FILE, base: cint, rnd: mpfr_rnd_t): csize <cimport '__gmpfr_inp_str',nodecl> end
+
+global function mpfr_fpif_export(stream: *FILE, op: mpfr_srcptr): cint <cimport '__gmpfr_fpif_export',nodecl> end
+global function mpfr_fpif_import(op: mpfr_srcptr, stream: *FILE): cint <cimport '__gmpfr_fpif_import',nodecl> end
+
+global function mpfr_dump(op: mpfr_srcptr): void <cimport,nodecl> end
+
+--
+-- Formatted Output Functions
+--
+global function mpfr_fprintf(stream: *FILE, template: cstring, ...: cvarargs): cint <cimport '__gmpfr_fprintf',nodecl> end
+global function mpfr_vfprintf(stream: *FILE, template: cstring, ap: cvalist): cint <cimport '__gmpfr_vfprintf',nodecl> end
+
+global function mpfr_printf(template: cstring, ...: cvarargs): cint <cimport,nodecl> end
+global function mpfr_vprintf(template: cstring, ap: cvalist): cint <cimport '__gmpfr_vprintf',nodecl> end
+
+global function mpfr_sprintf(buf: cstring, template: cstring, ...: cvarargs): cint <cimport,nodecl> end
+global function mpfr_vsprintf(buf: cstring, template: cstring, ap: cvalist): cint <cimport '__gmpfr_vsprintf',nodecl> end
+
+global function mpfr_snprintf(buf: cstring, n: csize, template: cstring, ...: cvarargs): cint <cimport,nodecl> end
+global function mpfr_vsnprintf(buf: cstring, n: csize, template: cstring, ap: cvalist): cint <cimport '__gmpfr_vsnprintf',nodecl> end
+
+global function mpfr_asprintf(str: *cstring, template: cstring, ...: cvarargs): cint <cimport,nodecl> end
+global function mpfr_vasprintf(str: *cstring, template: cstring, ap: cvalist): cint <cimport '__gmpfr_vasprintf',nodecl> end
+
+## end
+
+--
+-- Integer and Remainder Related Functions
+--
+global function mpfr_rint(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_ceil(rop: mpfr_ptr, op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_floor(rop: mpfr_ptr, op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_round(rop: mpfr_ptr, op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_roundeven(rop: mpfr_ptr, op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_trunc(rop: mpfr_ptr, op: mpfr_srcptr): cint <cimport,nodecl> end
+
+global function mpfr_rint_ceil(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_rint_floor(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_rint_round(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_rint_roundeven(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_rint_trunc(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_frac(rop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_modf(iop: mpfr_ptr, fop: mpfr_ptr, op: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_fmod(r: mpfr_ptr, x: mpfr_srcptr, y: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_fmodquo(r: mpfr_ptr, q: *clong, x: mpfr_srcptr, y: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_remainder(r: mpfr_ptr, x: mpfr_srcptr, y: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_remquo(r: mpfr_ptr, q: *clong, x: mpfr_srcptr, y: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_integer_p(op: mpfr_srcptr): cint <cimport,nodecl> end
+
+--
+-- Rounding-Related Functions
+--
+global function mpfr_set_default_rounding_mode(rnd: mpfr_rnd_t): void <cimport,nodecl> end
+global function mpfr_get_default_rounding_mode(): mpfr_rnd_t <cimport,nodecl> end
+
+global function mpfr_prec_round(x: mpfr_ptr, prec: clong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_can_round(b: mpfr_srcptr, err: clong, rnd1: mpfr_rnd_t, rnd2: mpfr_rnd_t, prec: clong): cint <cimport,nodecl> end
+global function mpfr_min_prec(x: mpfr_srcptr): clong <cimport,nodecl> end
+global function mpfr_print_rnd_mode(rnd: mpfr_rnd_t): cstring <cimport,nodecl> end
+
+--
+-- Miscellaneous Functions
+--
+global function mpfr_nexttoward(x: mpfr_ptr, y: mpfr_srcptr): void <cimport,nodecl> end
+global function mpfr_nextabove(x: mpfr_ptr): void <cimport,nodecl> end
+global function mpfr_nextbelow(x: mpfr_ptr): void <cimport,nodecl> end
+
+global function mpfr_min(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_max(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_urandomb(rop: mpfr_ptr, state: *gmp_randstate_t): cint <cimport,nodecl> end
+global function mpfr_urandom(rop: mpfr_ptr, state: *gmp_randstate_t, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_nrandom(rop1: mpfr_ptr, state: *gmp_randstate_t, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_grandom(rop1: mpfr_ptr, rop2: mpfr_ptr, state: *gmp_randstate_t, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_erandom(rop1: mpfr_ptr, state: *gmp_randstate_t, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_get_exp(x: mpfr_srcptr): clong <cimport,nodecl> end
+global function mpfr_set_exp(x: mpfr_ptr, e: clong): cint <cimport,nodecl> end
+
+global function mpfr_signbit(op: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_setsign(rop: mpfr_ptr, op: mpfr_srcptr, s: cint, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_copysign(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_get_version(): cstring <cimport,nodecl> end
+global function mpfr_get_patches(): cstring <cimport,nodecl> end
+
+global function mpfr_buildopt_tls_p(): cint <cimport,nodecl> end
+global function mpfr_buildopt_float128_p(): cint <cimport,nodecl> end
+global function mpfr_buildopt_decimal_p(): cint <cimport,nodecl> end
+global function mpfr_buildopt_gmpinternals_p(): cint <cimport,nodecl> end
+global function mpfr_buildopt_sharedcache_p(): cint <cimport,nodecl> end
+global function mpfr_buildopt_tune_case(): cstring <cimport,nodecl> end
+
+--
+-- Exception Related Functions
+--
+global function mpfr_get_emin(): clong <cimport,nodecl> end
+global function mpfr_get_emax(): clong <cimport,nodecl> end
+
+global function mpfr_set_emin(exp: clong): cint <cimport,nodecl> end
+global function mpfr_set_emax(exp: clong): cint <cimport,nodecl> end
+
+global function mpfr_get_emin_min(): clong <cimport,nodecl> end
+global function mpfr_get_emin_max(): clong <cimport,nodecl> end
+global function mpfr_get_emax_min(): clong <cimport,nodecl> end
+global function mpfr_get_emax_max(): clong <cimport,nodecl> end
+
+global function mpfr_check_range(x: mpfr_ptr, t: cint, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_subnormalize(x: mpfr_ptr, t: cint, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+global function mpfr_clear_underflow(): void <cimport,nodecl> end
+global function mpfr_clear_overflow(): void <cimport,nodecl> end
+global function mpfr_clear_divby0(): void <cimport,nodecl> end
+global function mpfr_clear_nanflag(): void <cimport,nodecl> end
+global function mpfr_clear_inexflag(): void <cimport,nodecl> end
+global function mpfr_clear_erangeflag(): void <cimport,nodecl> end
+
+global function mpfr_clear_flags(): void <cimport,nodecl> end
+
+global function mpfr_set_underflow(): void <cimport,nodecl> end
+global function mpfr_set_overflow(): void <cimport,nodecl> end
+global function mpfr_set_divby0(): void <cimport,nodecl> end
+global function mpfr_set_nanflag(): void <cimport,nodecl> end
+global function mpfr_set_inexflag(): void <cimport,nodecl> end
+global function mpfr_set_erangeflag(): void <cimport,nodecl> end
+
+global function mpfr_underflow_p(): cint <cimport,nodecl> end
+global function mpfr_overflow_p(): cint <cimport,nodecl> end
+global function mpfr_divby0_p(): cint <cimport,nodecl> end
+global function mpfr_nanflag_p(): cint <cimport,nodecl> end
+global function mpfr_inexflag_p(): cint <cimport,nodecl> end
+global function mpfr_erangeflag_p(): cint <cimport,nodecl> end
+
+global function mpfr_flags_clear(mask: cuint): void <cimport,nodecl> end
+global function mpfr_flags_set(mask: cuint): void <cimport,nodecl> end
+global function mpfr_flags_test(mask: cuint): cuint <cimport,nodecl> end
+global function mpfr_flags_save(): cuint <cimport,nodecl> end
+global function mpfr_flags_restore(flags: cuint, mask: cuint): void <cimport,nodecl> end
+
+--
+-- Memory Handling Functions
+--
+global function mpfr_free_cache(): void <cimport,nodecl> end
+global function mpfr_free_cache2(way: mpfr_free_cache_t): void <cimport,nodecl> end
+global function mpfr_free_pool(): void <cimport,nodecl> end
+global function mpfr_mp_memory_cleanup(): cint <cimport,nodecl> end
+
+--
+-- Compatibility With MPF
+--
+global function mpfr_set_prec_raw(x: mpfr_ptr, prec: clong): void <cimport,nodecl> end
+global function mpfr_eq(op1: mpfr_srcptr, op2: mpfr_srcptr, op3: culong): cint <cimport,nodecl> end
+global function mpfr_reldiff(rop: mpfr_ptr, op1: mpfr_srcptr, op2: mpfr_srcptr, rnd: mpfr_rnd_t): void <cimport,nodecl> end
+global function mpfr_mul_2exp(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+global function mpfr_div_2exp(rop: mpfr_ptr, op1: mpfr_srcptr, op2: culong, rnd: mpfr_rnd_t): cint <cimport,nodecl> end
+
+--
+-- Custom Interface
+--
+global function mpfr_custom_get_size(prec: clong): csize <cimport,nodecl> end
+global function mpfr_custom_init(significand: pointer, prec: clong): void <cimport,nodecl> end
+global function mpfr_custom_init_set(x: mpfr_ptr, kind: cint, exp: clong, prec: clong, significand: pointer): void <cimport,nodecl> end
+global function mpfr_custom_get_kind(x: mpfr_srcptr): cint <cimport,nodecl> end
+global function mpfr_custom_get_significand(x: mpfr_srcptr): pointer <cimport,nodecl> end
+global function mpfr_custom_get_exp(x: mpfr_srcptr): clong <cimport,nodecl> end
+global function mpfr_custom_move(x: mpfr_ptr, new_position: pointer): void <cimport,nodecl> end
+
+--
+-- Undocumented
+-- 
+global function mpfr_extract(y: mpz_ptr, p: mpfr_srcptr, i: cuint): void <cimport,nodecl> end
